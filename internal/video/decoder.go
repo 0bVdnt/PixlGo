@@ -1,13 +1,24 @@
 package video
 
 import (
+	"bufio"
 	"context"
 	"fmt"
+	"image"
+	"io"
 	"os/exec"
 	"strconv"
 	"strings"
 	"time"
 )
+
+// A decoded video frame
+type Frame struct {
+	Image     *image.RGBA
+	Width     int
+	Height    int
+	Timestamp time.Duration
+}
 
 // Video information
 type Metadata struct {
@@ -62,7 +73,7 @@ func (d *Decoder) probeMetadata() error {
 	d.metadata.Width, _ = strconv.Atoi(parts[0])
 	d.metadata.Height, _ = strconv.Atoi(parts[1])
 
-	// Parse frame rate (if format: "30/1")
+	// Parse frame rate (if format ex: "30/1")
 	if strings.Contains(parts[2], "/") {
 		fpsParts := strings.Split(parts[2], "/")
 		numer, _ := strconv.ParseFloat(fpsParts[0], 64)
@@ -70,7 +81,7 @@ func (d *Decoder) probeMetadata() error {
 		if denom > 0 {
 			d.metadata.FPS = numer / denom
 		}
-	} else {
+	} else { // if format ex: "24.45"
 		d.metadata.FPS, _ = strconv.ParseFloat(parts[2], 64)
 	}
 
@@ -136,6 +147,67 @@ func (d *Decoder) probeAudio() bool {
 // Returns video metadata
 func (d *Decoder) Metadata() Metadata {
 	return d.metadata
+}
+
+func (d *Decoder) ExtractFrame(timestamp time.Duration, width, height int) (*Frame, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// Ensure even dimensions
+	width = (width / 2) * 2
+	height = (height / 2) * 2
+
+	if width < 2 {
+		width = 2
+	}
+
+	if height < 2 {
+		height = 2
+	}
+
+	args := []string{
+		"-ss", fmt.Sprintf("%.3f", timestamp.Seconds()),
+		"-i", d.path,
+		"-vframes", "1",
+		"-vf", fmt.Sprintf("scale=%d:%d", width, height),
+		"-pix_fmt", "rgba",
+		"-f", "rawvideo",
+		"-loglevel", "quiet",
+		"-",
+	}
+
+	cmd := exec.CommandContext(ctx, "ffmpeg", args...)
+
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get stdout: %w", err)
+	}
+
+	if err := cmd.Start(); err != nil {
+		return nil, fmt.Errorf("failed to start ffmpeg: %w", err)
+	}
+
+	frameSize := width * height * 4 // RGBA
+	buf := make([]byte, frameSize)
+
+	reader := bufio.NewReader(stdout)
+	_, err = io.ReadFull(reader, buf)
+	if err != nil {
+		cmd.Wait()
+		return nil, fmt.Errorf("failed to read frame: %w", err)
+	}
+
+	cmd.Wait()
+
+	img := image.NewRGBA(image.Rect(0, 0, width, height))
+	copy(img.Pix, buf)
+
+	return &Frame{
+		Image:     img,
+		Width:     width,
+		Height:    height,
+		Timestamp: timestamp,
+	}, nil
 }
 
 // Returns video file path
