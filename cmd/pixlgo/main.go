@@ -5,6 +5,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/0bVdnt/PixlGo/internal/renderer"
 	"github.com/0bVdnt/PixlGo/internal/video"
 )
 
@@ -27,27 +28,26 @@ func main() {
 
 	meta := decoder.Metadata()
 
-	fmt.Println("\n=== Video Metadata ===")
-	fmt.Printf("Resolution: %dx%d\n", meta.Width, meta.Height)
-	fmt.Printf("FPS: %.2f\n", meta.FPS)
-	fmt.Printf("Duration: %v\n", meta.Duration)
-	fmt.Printf("Has audio: %v\n", meta.HasAudio)
+	render := renderer.New()
 
-	fmt.Println("\n=== Extracting Frame ===")
-	frame, err := decoder.ExtractFrame(1*time.Second, 80, 40)
+	// Extract a frame - use small size for terminal
+	frame, err := decoder.ExtractFrame(5*time.Second, 80, 40)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error extracting frame: %v\n", err)
 		os.Exit(1)
 	}
 
-	fmt.Printf("Frame extracted: %dx%d at %v\n", frame.Width, frame.Height, frame.Timestamp)
+	// Clear screen and render
+	render.Clear()
+	render.HideCursor()
 
-	fmt.Println("\nSample pixles(top-left corner):")
-	for y := 0; y < 3; y++ {
-		for x := 0; x < 5; x++ {
-			c := frame.Image.RGBAAt(x, y)
-			fmt.Printf("(%3d,%3d,%3d) ", c.R, c.G, c.B)
-		}
-		fmt.Println()
-	}
+	// Print video info
+	fmt.Printf("Video: %s (%dx%d @ %.1f fps)\n", videoPath, meta.Width, meta.Height, meta.FPS)
+	fmt.Printf("Frame at: %v\n\n", frame.Timestamp)
+
+	// Render as Colored Pixel Art
+	output := render.RenderColor(frame.Image)
+	fmt.Print(output)
+
+	render.ShowCursor()
 }
