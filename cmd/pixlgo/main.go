@@ -7,6 +7,7 @@ import (
 
 	"github.com/0bVdnt/PixlGo/internal/renderer"
 	"github.com/0bVdnt/PixlGo/internal/video"
+	"github.com/gdamore/tcell/v2"
 )
 
 func main() {
@@ -17,8 +18,7 @@ func main() {
 
 	videoPath := os.Args[1]
 
-	fmt.Printf("Opening: %s\n", videoPath)
-
+	// Initialize decoder
 	decoder, err := video.NewDecoder(videoPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
@@ -28,26 +28,105 @@ func main() {
 
 	meta := decoder.Metadata()
 
-	render := renderer.New()
-
-	// Extract a frame - use small size for terminal
-	frame, err := decoder.ExtractFrame(5*time.Second, 80, 40)
+	// Initialize renderer
+	render, err := renderer.New()
 	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error initializing renderer: %v\n", err)
+		os.Exit(1)
+	}
+	defer render.Close()
+
+	screenW, screenH := render.Size()
+
+	// Frame dimensions - Leave room for status bar
+	frameW := screenW
+	frameH := (screenH - 2) * 2 // * 2 for half blocks
+
+	// Maintain aspect ratio
+	videoAspect := float64(meta.Width) / float64(meta.Height)
+	frameAspect := float64(frameW) / float64(frameH)
+
+	if frameAspect > videoAspect {
+		frameW = int(float64(frameH) * videoAspect)
+	} else {
+		frameH = int(float64(frameW) / videoAspect)
+	}
+
+	// Ensure even dimensions
+	frameW = (frameW / 2) * 2
+	frameH = (frameH / 2) * 2
+
+	// Extract initial frame
+	currentTime := time.Duration(0)
+	frame, err := decoder.ExtractFrame(currentTime, frameW, frameH)
+	if err != nil {
+		render.Close()
 		fmt.Fprintf(os.Stderr, "Error extracting frame: %v\n", err)
 		os.Exit(1)
 	}
 
-	// Clear screen and render
-	render.Clear()
-	render.HideCursor()
+	// Main loop
+	running := true
+	for running {
+		render.Clear()
 
-	// Print video info
-	fmt.Printf("Video: %s (%dx%d @ %.1f fps)\n", videoPath, meta.Width, meta.Height, meta.FPS)
-	fmt.Printf("Frame at: %v\n\n", frame.Timestamp)
+		// Center the frame
+		cellH := frameH / 2
+		offsetX := (screenW - frameW) / 2
+		offsetY := (screenH - cellH - 2) / 2
 
-	// Render as Colored Pixel Art
-	output := render.RenderColor(frame.Image)
-	fmt.Print(output)
+		// Render frame
+		if frame != nil {
+			render.RenderImage(frame.Image, offsetX, offsetY)
+		}
 
-	render.ShowCursor()
+		// Draw Status bar
+		statusStyle := tcell.StyleDefault.
+			Background(tcell.ColorDarkBlue).
+			Foreground(tcell.ColorWhite)
+
+		statusY := screenH - 2
+		for x := range screenW {
+			render.Screen().SetContent(x, statusY, ' ', nil, statusStyle)
+		}
+
+		status := fmt.Sprintf(" Position: %v / %v | Frame: %dx%d | Press Q to Quit, <-/-> to seek",
+			currentTime.Round(time.Second),
+			meta.Duration.Round(time.Second),
+			frameW, frameH)
+		render.DrawText(0, statusY, status, statusStyle)
+
+		render.Show()
+
+		// Handle events
+		ev := render.Screen().PollEvent()
+		switch ev := ev.(type) {
+		case *tcell.EventKey:
+			switch ev.Key() {
+			case tcell.KeyEscape, tcell.KeyCtrlC:
+				running = false
+			case tcell.KeyRune:
+				if ev.Rune() == 'q' || ev.Rune() == 'Q' {
+					running = false
+				}
+			case tcell.KeyLeft:
+				// Seek backwards 5 seconds
+				currentTime -= 5 * time.Second
+				if currentTime < 0 {
+					currentTime = 0
+				}
+				frame, _ = decoder.ExtractFrame(currentTime, frameW, frameH)
+			case tcell.KeyRight:
+				// Seek forward 5 seconds
+				currentTime += 5 * time.Second
+				if currentTime > meta.Duration {
+					currentTime = meta.Duration
+				}
+				frame, _ = decoder.ExtractFrame(currentTime, frameW, frameH)
+			}
+		case *tcell.EventResize:
+			render.Screen().Sync()
+			screenW, screenH = render.Size()
+		}
+	}
 }
