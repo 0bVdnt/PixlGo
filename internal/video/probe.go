@@ -15,7 +15,7 @@ type Metadata struct {
 	Height   int
 	FPS      float64
 	Duration time.Duration
-	codec    string
+	Codec    string
 }
 
 // Checks if metadata has all the required fields
@@ -91,7 +91,7 @@ func parseProbeOutput(output string, meta *Metadata) {
 		case "r_frame_rate":
 			meta.FPS = parseFPS(val)
 		case "codec_name":
-			meta.codec = val
+			meta.Codec = val
 		}
 	}
 }
