@@ -20,7 +20,7 @@ func main() {
 	flag.Parse()
 
 	args := flag.Args()
-	if len(args) < 2 {
+	if len(args) < 1 {
 		fmt.Println("Usage: pixlgo [options] <video-flie>")
 		os.Exit(1)
 	}
