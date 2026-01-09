@@ -2,22 +2,40 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"os"
 	"time"
 
+	"github.com/0bVdnt/PixlGo/internal/logger"
 	"github.com/0bVdnt/PixlGo/internal/renderer"
 	"github.com/0bVdnt/PixlGo/internal/video"
 	"github.com/gdamore/tcell/v2"
 )
 
+var debugMode bool
+
 func main() {
-	if len(os.Args) < 2 {
-		fmt.Println("Usage: pixlgo <video-flie>")
+	flag.BoolVar(&debugMode, "debug", false, "Enable debug logging")
+	flag.Parse()
+
+	args := flag.Args()
+	if len(args) < 2 {
+		fmt.Println("Usage: pixlgo [options] <video-flie>")
 		os.Exit(1)
 	}
+	videoPath := args[0]
 
-	videoPath := os.Args[1]
+	// Setup logging
+	var log *logger.Logger
+	if debugMode {
+		log, _ = logger.New("/tmp/pixlgo.log")
+		defer log.Close()
+	} else {
+		log = logger.Noop()
+	}
+
+	log.Log("Starting PixlGo")
 
 	// Initialize decoder
 	decoder, err := video.NewDecoder(videoPath)
