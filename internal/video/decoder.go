@@ -22,14 +22,6 @@ type Decoder struct {
 	metadata Metadata
 }
 
-// A decoded video frame
-type Frame struct {
-	Image     *image.RGBA
-	Width     int
-	Height    int
-	Timestamp time.Duration
-}
-
 // Creates a new video decoder
 func NewDecoder(videoPath string) (*Decoder, error) {
 	// Check if file exists
@@ -126,8 +118,6 @@ func (d *Decoder) Stream(ctx context.Context, width, height int, startPos time.D
 
 			frame := &Frame{
 				Image:     img,
-				Width:     width,
-				Height:    height,
 				Timestamp: currentPos,
 			}
 
@@ -198,8 +188,6 @@ func (d *Decoder) ExtractFrame(timestamp time.Duration, width, height int) (*Fra
 
 	return &Frame{
 		Image:     img,
-		Width:     width,
-		Height:    height,
 		Timestamp: timestamp,
 	}, nil
 }
