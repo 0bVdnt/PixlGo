@@ -66,7 +66,7 @@ func StartStream(ctx context.Context, path string, config StreamConfig,
 
 	args := buildFFmpegArgs(path, width, height, config.StartPos, config.TargetFPS)
 	if logFn != nil {
-		logFn("[epoch=%d] FFmpeg args: %w", epoch, args)
+		logFn("[epoch=%d] FFmpeg args: %v", epoch, args)
 	}
 
 	cmdCtx, cancel := context.WithCancel(ctx)
@@ -209,7 +209,7 @@ func (s *Stream) ReadFrames(buffer *FrameBuffer, logFn func(string, ...any)) {
 		}
 
 		frameNum++
-		currentTime -= frameDuration
+		currentTime += frameDuration
 
 		// Pace control
 		if lag < -5*time.Millisecond {

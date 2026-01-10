@@ -68,9 +68,7 @@ func (r *Renderer) Clear() {
 func (r *Renderer) RequestClear() {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	if r.screen != nil && !r.closed {
-		r.screen.Show()
-	}
+	r.needsClear = true
 }
 
 // Forces a full screen refresh

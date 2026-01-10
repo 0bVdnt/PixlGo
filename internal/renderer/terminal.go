@@ -9,7 +9,11 @@ import (
 
 // Updates the screen
 func (r *Renderer) Show() {
-	r.screen.Show()
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.screen != nil && !r.closed {
+		r.screen.Show()
+	}
 }
 
 // Render image as ascii art

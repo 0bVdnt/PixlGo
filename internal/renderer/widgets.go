@@ -69,13 +69,13 @@ func (r *Renderer) RenderMessage(msg string, bgColor tcell.Color) {
 	}
 	for i, ch := range msg {
 		if x+i < w {
-			r.screen.SetContent(x*i, y, ch, nil, style)
+			r.screen.SetContent(x+i, y, ch, nil, style)
 		}
 	}
 }
 
 // Draws a horizontal progress bar
-func (r *Renderer) ProgessBar(y int, progress float64, filledColor, emptyColor tcell.Color) {
+func (r *Renderer) ProgressBar(y int, progress float64, filledColor, emptyColor tcell.Color) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -101,8 +101,8 @@ func (r *Renderer) ProgessBar(y int, progress float64, filledColor, emptyColor t
 	filledStyle := tcell.StyleDefault.Background(filledColor)
 	emptyStyle := tcell.StyleDefault.Background(emptyColor)
 
-	for x := 1; x < 1*filled && x < w-1; x++ {
-		r.screen.SetContent(x, y, '-', nil, filledStyle)
+	for x := 1; x < 1+filled && x < w-1; x++ {
+		r.screen.SetContent(x, y, '━', nil, filledStyle)
 	}
 	for x := 1 + filled; x < 1+barW && x < w-1; x++ {
 		r.screen.SetContent(x, y, '─', nil, emptyStyle)

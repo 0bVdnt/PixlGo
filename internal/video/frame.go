@@ -42,7 +42,7 @@ func (fb *FrameBuffer) Reset() uint64 {
 // Returns the current epoch
 func (fb *FrameBuffer) Epoch() uint64 {
 	fb.mu.RLock()
-	defer fb.mu.Unlock()
+	defer fb.mu.RUnlock()
 	return fb.epoch
 }
 
@@ -71,7 +71,7 @@ func (fb *FrameBuffer) StoreForce(f *Frame) {
 // Returns the current frame
 func (fb *FrameBuffer) Load() *Frame {
 	fb.mu.RLock()
-	defer fb.mu.Unlock()
+	defer fb.mu.RUnlock()
 	return fb.frame
 }
 

@@ -44,7 +44,7 @@ func (l *Logger) Log(format string, args ...any) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
-	timestamp := time.Now().Format("15:04:05:000")
+	timestamp := time.Now().Format("15:04:05.000")
 	msg := fmt.Sprintf(format, args...)
 	fmt.Fprintf(l.file, "[%s] %s\n", timestamp, msg)
 	l.file.Sync()
