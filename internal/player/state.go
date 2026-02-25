@@ -39,15 +39,15 @@ func (s State) String() string {
 func (s State) Icon() string {
 	switch s {
 	case StatePlaying:
-		return "▶"
-	case StatePaused:
 		return "⏸"
+	case StatePaused:
+		return "▶"
 	case StateLoading:
-		return "⏳"
+		return "⧗"
 	case StateError:
-		return "⚠"
+		return "ⓘ"
 	case StateEnded:
-		return "⏹"
+		return "■"
 	default:
 		return "○"
 	}
